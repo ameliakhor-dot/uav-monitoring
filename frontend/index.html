@@ -29,7 +29,8 @@
   --text1:         #e8f4f8;
   --text2:         #6b8899;
   --text3:         #3a5060;
-  --easing:        cubic-bezier(0.4, 0, 0.2, 1);
+  --easing:        cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out:   cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 html, body {
@@ -352,10 +353,16 @@ html, body {
   position: relative;
   overflow: hidden;
 }
-.drone-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--border-hover);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,255,0.1);
+@media (hover: hover) and (pointer: fine) {
+  .drone-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-hover);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,255,0.1);
+  }
+}
+.drone-card:active {
+  transform: scale(0.98);
+  transition: transform 100ms var(--easing);
 }
 .drone-card.selected {
   border-color: var(--cyan);
@@ -366,8 +373,8 @@ html, body {
   animation: card-border-pulse 1.5s ease-in-out infinite;
 }
 @keyframes card-border-pulse {
-  0%, 100% { border-color: rgba(0,212,255,0.15); }
-  50%       { border-color: rgba(255,51,85,0.6); }
+  0%, 100% { box-shadow: 0 0 12px rgba(255,51,85,0.15); }
+  50%       { box-shadow: 0 0 20px rgba(255,51,85,0.4), 0 0 0 1px rgba(255,51,85,0.4); }
 }
 
 .card-top {
@@ -650,9 +657,14 @@ tbody tr {
   border-left: 3px solid transparent;
   cursor: pointer;
 }
-tbody tr:hover {
-  background: rgba(0,212,255,0.03);
-  border-left: 3px solid rgba(0,212,255,0.4);
+@media (hover: hover) and (pointer: fine) {
+  tbody tr:hover {
+    background: rgba(0,212,255,0.03);
+    border-left: 3px solid rgba(0,212,255,0.4);
+  }
+}
+tbody tr:active {
+  background: rgba(0,212,255,0.07);
 }
 tbody tr.selected {
   background: rgba(0,212,255,0.06);
@@ -708,8 +720,8 @@ tbody tr.status-offline:hover { background: transparent; }
 .status-badge.LOW_BATTERY { background: rgba(255,51,85,0.1); border: 1px solid rgba(255,51,85,0.3); color: var(--red); animation: badge-pulse 1s ease-in-out infinite; }
 .status-badge.OFFLINE     { background: rgba(74,85,104,0.15); border: 1px solid rgba(74,85,104,0.3); color: #6b7280; font-style: italic; }
 @keyframes badge-pulse {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.03); }
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
 }
 
 /* BATTERY cell */
@@ -736,10 +748,14 @@ tbody tr.status-offline:hover { background: transparent; }
 }
 .battery-fill.high   { background: linear-gradient(90deg, var(--green), var(--cyan)); }
 .battery-fill.medium { background: linear-gradient(90deg, var(--amber), #ff8800); }
-.battery-fill.low    { background: linear-gradient(90deg, var(--red), #ff0000); animation: shimmer 1.5s linear infinite; }
+.battery-fill.low    {
+  background: linear-gradient(90deg, var(--red) 0%, #ff6677 50%, var(--red) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ALTITUDE cell */
@@ -897,6 +913,15 @@ tbody tr.status-offline:hover { background: transparent; }
 @keyframes crit-pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .logo-svg { animation: none; }
 }
 </style>
 </head>
@@ -1441,7 +1466,7 @@ function buildGaugeSVG(cfg) {
       stroke="url(#${cfg.gradId})" stroke-width="6" stroke-linecap="round"
       stroke-dasharray="0 ${CIRC}"
       transform="rotate(${START_ANGLE} 40 40)"
-      style="transition: stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1); filter: drop-shadow(0 0 6px ${cfg.color})"
+      style="transition: stroke-dasharray 0.8s cubic-bezier(0.23,1,0.32,1); filter: drop-shadow(0 0 6px ${cfg.color})"
       class="gauge-arc-${cfg.id}"/>
     <!-- Tick marks at 0,25,50,75,100% positions along the arc -->
     ${[0,0.25,0.5,0.75,1].map(t => {
@@ -1792,7 +1817,7 @@ function buildSpeedSVG(speed) {
     <path d="M4,16 A${R_arc},${R_arc} 0 0,1 28,16"
       fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round"
       stroke-dasharray="${valLen} ${totalArcLen}"
-      style="transition:stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)"/>
+      style="transition:stroke-dasharray 0.6s cubic-bezier(0.23,1,0.32,1)"/>
   </svg>`;
 }
 
@@ -1828,7 +1853,7 @@ function buildCompassSVG(headingDeg, droneId) {
     <text x="6.5" y="19" text-anchor="middle" dominant-baseline="middle"
       font-family="'SF Mono',monospace" font-size="5" fill="rgba(107,136,153,0.9)">W</text>
     <!-- Rotating inner group -->
-    <g id="${innerGroupId}" style="transform-origin:18px 18px; transform:rotate(${headingDeg}deg); transition:transform 0.8s cubic-bezier(0.4,0,0.2,1)">
+    <g id="${innerGroupId}" style="transform-origin:18px 18px; transform:rotate(${headingDeg}deg); transition:transform 0.35s cubic-bezier(0.23,1,0.32,1)">
       <!-- North (cyan) half -->
       <polygon points="18,8 20,18 18,16 16,18" fill="#00d4ff" filter="drop-shadow(0 0 3px rgba(0,212,255,0.8))"/>
       <!-- South (dim) half -->
