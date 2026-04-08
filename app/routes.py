@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, send_file, request
 from prometheus_flask_exporter import PrometheusMetrics
 
-from app.simulator import get_fleet, get_drone, get_fleet_summary, get_drone_history
+from app.simulator import get_fleet, get_drone, get_fleet_summary, get_drone_history, recharge_drone
 
 app = Flask(__name__, static_folder=None)
 metrics = PrometheusMetrics(app)
@@ -59,6 +59,14 @@ def drone_history(drone_id: str):
     if history is None:
         return jsonify({"error": f"Drone '{drone_id}' not found", "path": request.path}), 404
     return jsonify(history)
+
+
+@app.route("/drones/<drone_id>/recharge", methods=["POST"])
+def drone_recharge(drone_id: str):
+    result = recharge_drone(drone_id)
+    if result is None:
+        return jsonify({"error": f"Drone '{drone_id}' not found", "path": request.path}), 404
+    return jsonify(result)
 
 
 @app.route("/fleet/summary")

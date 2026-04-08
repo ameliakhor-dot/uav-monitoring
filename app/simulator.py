@@ -201,3 +201,15 @@ def get_drone_history(drone_id: str):
         if drone is None:
             return None
         return list(drone["position_history"])
+
+
+def recharge_drone(drone_id: str):
+    with _lock:
+        drone = _fleet.get(drone_id)
+        if drone is None:
+            return None
+        drone["battery"] = 100.0
+        drone["status"] = "ACTIVE"
+        drone["last_status_change"] = datetime.now(timezone.utc).isoformat()
+        _tick_drone(drone)
+        return _drone_to_dict(drone)
