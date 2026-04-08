@@ -1,0 +1,9 @@
+# Created by pytest automatically.
+*__pycache__/
+*.pyc
+*.pyo
+.env
+*.pem
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup

@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAV-MONITOR // TACTICAL FLEET OPERATIONS</title>
+<style>
+/* ═══════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:            #020408;
+  --surface1:      rgba(8, 16, 32, 0.8);
+  --surface2:      rgba(12, 24, 48, 0.9);
+  --border:        rgba(0, 212, 255, 0.15);
+  --border-hover:  rgba(0, 212, 255, 0.4);
+  --cyan:          #00d4ff;
+  --cyan-dim:      rgba(0, 212, 255, 0.6);
+  --green:         #00ff88;
+  --amber:         #ffb800;
+  --red:           #ff3355;
+  --purple:        #8b5cf6;
+  --text1:         #e8f4f8;
+  --text2:         #6b8899;
+  --text3:         #3a5060;
+  --easing:        cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text1);
+  font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+  user-select: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SCROLLBARS
+═══════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(0,212,255,0.4), rgba(0,102,255,0.4));
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(0,212,255,0.7), rgba(0,102,255,0.7));
+}
+::selection { background: rgba(0,212,255,0.2); color: #00d4ff; }
+
+/* ═══════════════════════════════════════════════════════
+   BACKGROUND LAYERS
+═══════════════════════════════════════════════════════ */
+#bg-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,30,60,0.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(0,10,40,0.3) 0%, transparent 50%),
+    #020408;
+}
+
+#bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+}
+
+#bg-particles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PAGE LAYOUT
+═══════════════════════════════════════════════════════ */
+#app {
+  display: grid;
+  grid-template-rows: 72px 1fr 36px;
+  grid-template-columns: 1fr;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+#header {
+  grid-row: 1;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 400ms var(--easing), transform 400ms var(--easing);
+}
+
+#main {
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  overflow: hidden;
+}
+
+#status-bar {
+  grid-row: 3;
+  opacity: 0;
+  transition: opacity 400ms var(--easing);
+}
+
+#left-sidebar {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 400ms var(--easing), transform 400ms var(--easing);
+}
+
+#center-panel {
+  opacity: 0;
+  transition: opacity 500ms var(--easing);
+}
+
+#right-sidebar {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 400ms var(--easing), transform 400ms var(--easing);
+}
+
+/* ═══════════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════════ */
+#header {
+  background: rgba(2, 8, 16, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+  box-shadow: 0 1px 0 rgba(0,212,255,0.1), 0 4px 24px rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.logo-svg {
+  animation: logo-spin 30s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: #fff;
+  text-transform: uppercase;
+}
+.brand-sub {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: rgba(0, 212, 255, 0.5);
+  text-transform: uppercase;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid;
+  border-radius: 2px;
+  padding: 4px 12px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-pill.green  { border-color: rgba(0,255,136,0.3);  color: var(--green); }
+.status-pill.cyan   { border-color: rgba(0,212,255,0.3);  color: var(--cyan); }
+.status-pill.amber  { border-color: rgba(255,184,0,0.3);  color: var(--amber); }
+.status-pill.red    { border-color: rgba(255,51,85,0.3);   color: var(--red); }
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+#zulu-clock {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+#zulu-date {
+  font-size: 10px;
+  color: var(--text2);
+  letter-spacing: 0.1em;
+}
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--red);
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SVG PULSE DOTS
+═══════════════════════════════════════════════════════ */
+.pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes pulse-ring {
+  0%   { r: 3; opacity: 0.6; }
+  100% { r: 7; opacity: 0; }
+}
+.pulse-ring-fast {
+  animation: pulse-ring 1.2s ease-in-out infinite alternate;
+}
+@keyframes pulse-ring-live {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+.live-dot-anim { animation: pulse-ring-live 1.2s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════════════════
+   LEFT SIDEBAR
+═══════════════════════════════════════════════════════ */
+#left-sidebar {
+  background: var(--surface1);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sidebar-section {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+
+/* Fleet status rows */
+.fleet-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-left: 3px solid transparent;
+  padding-left: 8px;
+  margin-left: -8px;
+}
+.fleet-metric-row.green  { border-left-color: var(--green); }
+.fleet-metric-row.amber  { border-left-color: var(--amber); }
+.fleet-metric-row.red    { border-left-color: var(--red); }
+.fleet-metric-row.gray   { border-left-color: var(--text3); }
+.fleet-metric-row.cyan   { border-left-color: var(--cyan); }
+
+.fleet-metric-label {
+  font-size: 10px;
+  color: var(--text2);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.fleet-metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text1);
+}
+
+.battery-row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+  border-left: 3px solid var(--cyan);
+  padding-left: 8px;
+  margin-left: -8px;
+}
+.battery-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.battery-bar-track {
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.battery-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  border-radius: 2px;
+  transition: width 1s var(--easing);
+}
+
+/* Drone cards */
+.drone-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: transform 150ms var(--easing), border-color 150ms var(--easing), box-shadow 150ms var(--easing);
+  margin-bottom: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.drone-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hover);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,212,255,0.1);
+}
+.drone-card.selected {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(0,212,255,0.3), 0 4px 16px rgba(0,0,0,0.5);
+}
+.drone-card.low-battery {
+  box-shadow: 0 0 12px rgba(255,51,85,0.2);
+  animation: card-border-pulse 1.5s ease-in-out infinite;
+}
+@keyframes card-border-pulse {
+  0%, 100% { border-color: rgba(0,212,255,0.15); }
+  50%       { border-color: rgba(255,51,85,0.6); }
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.card-drone-id {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.05em;
+}
+.card-status-badge {
+  font-size: 8px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+.card-threat {
+  font-size: 8px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.card-battery-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.card-battery-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s var(--easing);
+}
+
+.card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+.card-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.card-metric-label {
+  font-size: 7px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.card-metric-value {
+  font-size: 11px;
+  color: var(--text1);
+  font-weight: 600;
+}
+
+/* Mission Log */
+#mission-log-list {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.log-entry {
+  display: grid;
+  grid-template-columns: 52px 52px 1fr;
+  gap: 4px;
+  align-items: center;
+  font-size: 9px;
+  padding: 2px 0;
+  animation: log-fade-in 400ms var(--easing) forwards;
+  opacity: 0;
+}
+@keyframes log-fade-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.log-time   { color: var(--text3); font-size: 8px; }
+.log-id     { color: var(--cyan);  font-weight: 700; }
+.log-event  { color: var(--text2); }
+
+/* ═══════════════════════════════════════════════════════
+   CENTER PANEL
+═══════════════════════════════════════════════════════ */
+#center-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* Alert banner */
+#alert-banner {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, rgba(255,51,85,0.15), rgba(255,51,85,0.05));
+  border: 1px solid rgba(255,51,85,0.4);
+  border-radius: 2px;
+  margin: 8px 12px 0;
+  animation: alert-glow 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes alert-glow {
+  0%, 100% { box-shadow: 0 0 0px rgba(255,51,85,0); }
+  50%       { box-shadow: 0 0 20px rgba(255,51,85,0.3); }
+}
+.alert-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.alert-icon-wrap { animation: alert-icon-pulse 1.5s ease-in-out infinite; }
+@keyframes alert-icon-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+.alert-ids {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.alert-id-pill {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(255,51,85,0.15);
+  border: 1px solid rgba(255,51,85,0.4);
+  border-radius: 2px;
+  color: var(--red);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* Map panel */
+.map-wrapper {
+  flex-shrink: 0;
+  margin: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(0,20,40,0.6);
+  position: relative;
+}
+.map-title {
+  padding: 5px 10px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+}
+#map-canvas {
+  display: block;
+  width: 100%;
+  height: 200px;
+}
+/* Scanline overlay */
+.map-scanline {
+  position: absolute;
+  left: 0; right: 0;
+  top: 28px; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0,0,0,0.15) 1px,
+    rgba(0,0,0,0.15) 2px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Telemetry table */
+.table-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface1);
+  overflow: hidden;
+  min-height: 0;
+}
+.table-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.table-header-title {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--cyan);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.blink { animation: blink 1.4s step-end infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.table-scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+thead tr {
+  background: rgba(0, 212, 255, 0.05);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+th {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text2);
+  padding: 7px 8px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Column widths */
+th:nth-child(1),  td:nth-child(1)  { width: 110px; } /* UNIT */
+th:nth-child(2),  td:nth-child(2)  { width: 100px; } /* STATUS */
+th:nth-child(3),  td:nth-child(3)  { width: 90px;  } /* BATTERY */
+th:nth-child(4),  td:nth-child(4)  { width: 56px;  } /* SIGNAL */
+th:nth-child(5),  td:nth-child(5)  { width: 70px;  } /* ALTITUDE */
+th:nth-child(6),  td:nth-child(6)  { width: 74px;  } /* SPEED */
+th:nth-child(7),  td:nth-child(7)  { width: 52px;  } /* HEADING */
+th:nth-child(8),  td:nth-child(8)  { width: 100px; } /* COORDS */
+th:nth-child(9),  td:nth-child(9)  { width: 72px;  } /* FLIGHT */
+th:nth-child(10), td:nth-child(10) { width: 88px;  } /* THREAT */
+
+td {
+  padding: 7px 8px;
+  vertical-align: middle;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+tbody tr {
+  border-bottom: 1px solid rgba(0,212,255,0.04);
+  transition: background 150ms var(--easing), border-left-color 150ms var(--easing);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+tbody tr:hover {
+  background: rgba(0,212,255,0.03);
+  border-left: 3px solid rgba(0,212,255,0.4);
+}
+tbody tr.selected {
+  background: rgba(0,212,255,0.06);
+  border-left: 3px solid var(--cyan);
+}
+tbody tr.row-flash {
+  animation: row-flash 2s var(--easing) forwards;
+}
+@keyframes row-flash {
+  0%   { background: rgba(0,212,255,0.2); }
+  100% { background: transparent; }
+}
+tbody tr.status-low-battery {
+  background: rgba(255,51,85,0.03);
+  border-left: 3px solid rgba(255,51,85,0.5);
+}
+tbody tr.status-offline {
+  opacity: 0.45;
+}
+tbody tr.status-offline:hover { background: transparent; }
+
+/* UNIT cell */
+.unit-cell { display: flex; flex-direction: column; gap: 3px; }
+.unit-top  { display: flex; align-items: center; gap: 5px; }
+.unit-id   { font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 0.05em; }
+.mission-badge {
+  display: inline-block;
+  font-size: 7px;
+  padding: 1px 4px;
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 2px;
+  color: var(--purple);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* STATUS cell */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-badge.ACTIVE      { background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); color: var(--green); box-shadow: 0 0 8px rgba(0,255,136,0.1); }
+.status-badge.RETURNING   { background: rgba(255,184,0,0.1); border: 1px solid rgba(255,184,0,0.3); color: var(--amber); }
+.status-badge.LOW_BATTERY { background: rgba(255,51,85,0.1); border: 1px solid rgba(255,51,85,0.3); color: var(--red); animation: badge-pulse 1s ease-in-out infinite; }
+.status-badge.OFFLINE     { background: rgba(74,85,104,0.15); border: 1px solid rgba(74,85,104,0.3); color: #6b7280; font-style: italic; }
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.03); }
+}
+
+/* BATTERY cell */
+.battery-cell { display: flex; flex-direction: column; gap: 3px; }
+.battery-pct  { font-size: 18px; font-weight: 700; line-height: 1; }
+.battery-track {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.battery-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1s var(--easing);
+  position: relative;
+}
+.battery-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+}
+.battery-fill.high   { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+.battery-fill.medium { background: linear-gradient(90deg, var(--amber), #ff8800); }
+.battery-fill.low    { background: linear-gradient(90deg, var(--red), #ff0000); animation: shimmer 1.5s linear infinite; }
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ALTITUDE cell */
+.alt-cell { display: flex; align-items: center; gap: 5px; }
+.alt-number { font-size: 14px; color: var(--text1); }
+.alt-unit   { font-size: 9px;  color: var(--text3); }
+.alt-bar-wrap { width: 4px; height: 20px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; display: flex; align-items: flex-end; }
+.alt-bar-fill { width: 100%; background: var(--cyan); border-radius: 2px; transition: height 1s var(--easing); }
+
+/* COORDS cell */
+.coords-cell { display: flex; flex-direction: column; gap: 2px; }
+.coord-line  { font-size: 10px; color: var(--text2); transition: color 300ms; }
+.coord-line.flash { color: var(--cyan); }
+
+/* FLIGHT TIME */
+.flight-time { font-size: 11px; color: var(--text2); }
+
+/* ═══════════════════════════════════════════════════════
+   RIGHT SIDEBAR
+═══════════════════════════════════════════════════════ */
+#right-sidebar {
+  background: var(--surface1);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.gauges-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 4px 0 8px;
+  gap: 4px;
+}
+
+.gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gauge-label {
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+/* Telemetry feed */
+#telemetry-feed {
+  background: rgba(0,0,0,0.4);
+  font-size: 10px;
+  line-height: 1.6;
+  height: 180px;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+.telem-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.telem-normal  { color: rgba(0,212,255,0.8); }
+.telem-warning { color: rgba(255,51,85,0.9); }
+.telem-ok      { color: rgba(0,255,136,0.8); }
+
+/* Threat matrix */
+#threat-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+#threat-table tr {
+  border-bottom: 1px solid rgba(0,212,255,0.04);
+}
+#threat-table td {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+.threat-drone-id { color: var(--cyan); font-weight: 700; }
+
+.fleet-threat-display {
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+/* Network status */
+.network-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.net-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0,212,255,0.04);
+}
+.net-label { font-size: 9px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.1em; }
+.net-value { font-size: 11px; color: var(--text1); font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════════════════ */
+#status-bar {
+  background: rgba(2, 8, 16, 0.98);
+  border-top: 1px solid rgba(0,212,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  position: relative;
+  height: 36px;
+}
+#sync-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--cyan);
+  transition: width 100ms linear;
+  box-shadow: 0 0 4px var(--cyan);
+}
+.sb-section { font-size: 10px; color: var(--text2); letter-spacing: 0.05em; }
+.sb-section.center { font-variant-numeric: tabular-nums; }
+.feed-active { color: var(--green); }
+.feed-error  { color: var(--red); animation: blink 1s step-end infinite; }
+
+/* ═══════════════════════════════════════════════════════
+   THREAT BADGE SYSTEM
+═══════════════════════════════════════════════════════ */
+.threat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-left-width: 2px;
+  border-left-style: solid;
+}
+.threat-badge.NOMINAL   { border-left-color: var(--green); background: rgba(0,255,136,0.08); color: var(--green); }
+.threat-badge.ELEVATED  { border-left-color: var(--amber); background: rgba(255,184,0,0.08);  color: var(--amber); }
+.threat-badge.CRITICAL  { border-left-color: var(--red);   background: rgba(255,51,85,0.08);  color: var(--red); box-shadow: 0 0 8px rgba(255,51,85,0.3); animation: crit-pulse 1s ease-in-out infinite; }
+.threat-badge.UNKNOWN   { border-left-color: #4a5568; background: rgba(74,85,104,0.08); color: #6b7280; }
+@keyframes crit-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+</style>
+</head>
+<body>
+
+<div id="bg-gradient"></div>
+<canvas id="bg-grid"></canvas>
+<canvas id="bg-particles"></canvas>
+
+<div id="app">
+
+  <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+  <header id="header">
+    <div class="header-left">
+      <!-- Logo SVG -->
+      <svg class="logo-svg" width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="logo-glow">
+            <feGaussianBlur stdDeviation="1.5" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+          <linearGradient id="logo-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#00d4ff"/>
+            <stop offset="100%" stop-color="#0066ff"/>
+          </linearGradient>
+        </defs>
+        <!-- Outer hexagon: flat-top, rotated 90deg -->
+        <polygon points="20,3 34.66,11.5 34.66,28.5 20,37 5.34,28.5 5.34,11.5"
+          stroke="rgba(0,212,255,0.8)" stroke-width="1.5" fill="none" filter="url(#logo-glow)"/>
+        <!-- Inner hexagon: offset 30deg, 65% scale -->
+        <polygon points="20,8.25 29.3,13.625 29.3,24.375 20,29.75 10.7,24.375 10.7,13.625"
+          stroke="rgba(0,212,255,0.4)" stroke-width="1" fill="none"
+          transform="rotate(30 20 20)"/>
+        <!-- Signal beams to outer hex midpoints -->
+        <line x1="20" y1="18" x2="34.66" y2="20" stroke="rgba(0,212,255,0.3)" stroke-width="0.5"/>
+        <line x1="20" y1="18" x2="12.67" y2="32.25" stroke="rgba(0,212,255,0.3)" stroke-width="0.5"/>
+        <line x1="20" y1="18" x2="27.33" y2="32.25" stroke="rgba(0,212,255,0.3)" stroke-width="0.5"/>
+        <!-- Center triangle (drone from above) -->
+        <polygon points="20,12 25,22 15,22" fill="url(#logo-grad)"/>
+      </svg>
+      <div class="brand-text">
+        <div class="brand-name">UAV-MONITOR</div>
+        <div class="brand-sub">Tactical Fleet Operations // Classified</div>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="status-pill green">
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="3" fill="#00ff88"/>
+          <circle cx="8" cy="8" r="3" stroke="#00ff88" fill="none" class="pulse-ring"/>
+        </svg>
+        SYS NOMINAL
+      </div>
+      <div class="status-pill cyan">
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="3" fill="#00d4ff"/>
+          <circle cx="8" cy="8" r="3" stroke="#00d4ff" fill="none" class="pulse-ring"/>
+        </svg>
+        UPLINK ACTIVE
+      </div>
+      <div class="status-pill cyan" id="gps-pill">
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="3" fill="#00d4ff"/>
+          <circle cx="8" cy="8" r="3" stroke="#00d4ff" fill="none" class="pulse-ring"/>
+        </svg>
+        GPS LOCK: 5/5
+      </div>
+      <div class="status-pill green" id="threat-pill">
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="3" fill="#00ff88" id="threat-dot"/>
+          <circle cx="8" cy="8" r="3" stroke="#00ff88" fill="none" class="pulse-ring" id="threat-ring"/>
+        </svg>
+        <span id="threat-pill-text">THREAT: NOMINAL</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div id="zulu-clock">00:00:00 Z</div>
+      <div id="zulu-date">07 APR 2026</div>
+      <div class="live-badge">
+        <svg width="16" height="16" viewBox="0 0 16 16" class="live-dot-anim">
+          <circle cx="8" cy="8" r="3" fill="#ff3355"/>
+        </svg>
+        LIVE
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════ MAIN ═══════════════════════════════ -->
+  <div id="main">
+
+    <!-- LEFT SIDEBAR -->
+    <aside id="left-sidebar">
+      <!-- Fleet Status -->
+      <div class="sidebar-section">
+        <div class="section-title">Fleet Status</div>
+        <div class="fleet-metric-row cyan">
+          <span class="fleet-metric-label">Total Drones</span>
+          <span class="fleet-metric-value" id="sb-total">5</span>
+        </div>
+        <div class="fleet-metric-row green">
+          <span class="fleet-metric-label">Active</span>
+          <span class="fleet-metric-value" id="sb-active">–</span>
+        </div>
+        <div class="fleet-metric-row amber">
+          <span class="fleet-metric-label">Returning</span>
+          <span class="fleet-metric-value" id="sb-returning">–</span>
+        </div>
+        <div class="fleet-metric-row red">
+          <span class="fleet-metric-label">Low Battery</span>
+          <span class="fleet-metric-value" id="sb-low">–</span>
+        </div>
+        <div class="fleet-metric-row gray">
+          <span class="fleet-metric-label">Offline</span>
+          <span class="fleet-metric-value" id="sb-offline">–</span>
+        </div>
+        <div class="battery-row-wrap">
+          <div class="battery-row-top">
+            <span class="fleet-metric-label">Avg Battery</span>
+            <span class="fleet-metric-value" id="sb-avg-bat">–</span>
+          </div>
+          <div class="battery-bar-track">
+            <div class="battery-bar-fill" id="sb-avg-bat-bar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drone Cards -->
+      <div class="sidebar-section" id="drone-cards-section">
+        <div class="section-title">Drone Units</div>
+        <div id="drone-cards"></div>
+      </div>
+
+      <!-- Mission Log -->
+      <div class="sidebar-section" style="flex:1; min-height:0;">
+        <div class="section-title">Mission Log</div>
+        <div id="mission-log-list"></div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <main id="center-panel">
+      <!-- Alert banner -->
+      <div id="alert-banner">
+        <div class="alert-left">
+          <div class="alert-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M9 1.5 L16.5 15.5 L1.5 15.5 Z" stroke="#ff3355" stroke-width="1.5" stroke-linejoin="round" fill="rgba(255,51,85,0.15)" rx="1.5"/>
+              <rect x="8.25" y="6.5" width="1.5" height="5" fill="#ff3355"/>
+              <rect x="8" y="12.5" width="2" height="2" fill="#ff3355"/>
+            </svg>
+          </div>
+          <span id="alert-text">ALERT: 0 UNIT(S) REQUIRE IMMEDIATE ACTION</span>
+        </div>
+        <div class="alert-ids" id="alert-ids"></div>
+      </div>
+
+      <!-- Map -->
+      <div class="map-wrapper">
+        <div class="map-title">Tactical Map — San Jose Area Ops Zone</div>
+        <canvas id="map-canvas"></canvas>
+        <div class="map-scanline"></div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        <div class="table-header-bar">
+          <div class="table-header-title">Telemetry Feed</div>
+          <div class="live-indicator">
+            LIVE <span class="blink">●</span> REFRESHING
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Unit</th>
+                <th>Status</th>
+                <th>Battery</th>
+                <th>Signal</th>
+                <th>Altitude</th>
+                <th>Speed</th>
+                <th>Heading</th>
+                <th>Coords</th>
+                <th>Flight</th>
+                <th>Threat</th>
+              </tr>
+            </thead>
+            <tbody id="drone-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside id="right-sidebar">
+      <!-- Fleet Health -->
+      <div class="sidebar-section">
+        <div class="section-title">Fleet Health</div>
+        <div class="gauges-row">
+          <div class="gauge-wrap">
+            <svg id="gauge-battery" width="80" height="80" viewBox="0 0 80 80"></svg>
+            <div class="gauge-label">Battery</div>
+          </div>
+          <div class="gauge-wrap">
+            <svg id="gauge-signal" width="80" height="80" viewBox="0 0 80 80"></svg>
+            <div class="gauge-label">Signal</div>
+          </div>
+          <div class="gauge-wrap">
+            <svg id="gauge-uptime" width="80" height="80" viewBox="0 0 80 80"></svg>
+            <div class="gauge-label">Uptime</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Telemetry -->
+      <div class="sidebar-section" style="padding:0;">
+        <div class="section-title" style="padding:10px 12px 6px;">Sys Telemetry</div>
+        <div id="telemetry-feed"></div>
+      </div>
+
+      <!-- Threat Matrix -->
+      <div class="sidebar-section">
+        <div class="section-title">Threat Matrix</div>
+        <table id="threat-table">
+          <tbody id="threat-tbody"></tbody>
+        </table>
+        <div class="fleet-threat-display" id="fleet-threat-display">NOMINAL</div>
+      </div>
+
+      <!-- Network Status -->
+      <div class="sidebar-section">
+        <div class="section-title">Uplink Status</div>
+        <div class="network-rows">
+          <div class="net-row">
+            <span class="net-label">API Calls</span>
+            <span class="net-value" id="net-api-calls">0</span>
+          </div>
+          <div class="net-row">
+            <span class="net-label">Latency</span>
+            <span class="net-value" id="net-latency">–</span>
+          </div>
+          <div class="net-row">
+            <span class="net-label">Data Rate</span>
+            <span class="net-value" id="net-data-rate">–</span>
+          </div>
+          <div class="net-row">
+            <span class="net-label">Feed Status</span>
+            <span class="net-value feed-active" id="net-feed-status">● NOMINAL</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /#main -->
+
+  <!-- STATUS BAR -->
+  <div id="status-bar">
+    <div id="sync-progress" style="width:0%"></div>
+    <div class="sb-section">
+      <span id="feed-status-text" class="feed-active">● TELEMETRY FEED ACTIVE</span>
+    </div>
+    <div class="sb-section center" id="sync-countdown">NEXT SYNC IN: 2.0s</div>
+    <div class="sb-section" id="session-info">SESSION: 0h 0m 0s | API CALLS: 0 | v2.4.1</div>
+  </div>
+
+</div><!-- /#app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════════
+const state = {
+  drones: new Map(),
+  previousStatuses: new Map(),
+  previousCoords: new Map(),
+  missionLog: [],
+  apiCallCount: 0,
+  sessionStart: Date.now(),
+  selectedDroneId: null,
+  mapPositions: new Map(),
+  lastFetchTime: 0,
+  fetchError: false,
+  summary: null,
+  gaugeValues: { battery: 0, signal: 0, uptime: 0 },
+  firstLoad: true,
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function lerp(a, b, t) { return a + (b - a) * Math.min(1, Math.max(0, t)); }
+
+function formatTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}h ${m.toString().padStart(2,'0')}m`;
+  return `${m}m ${s.toString().padStart(2,'0')}s`;
+}
+
+function formatElapsed(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h}h ${m}m ${sec}s`;
+}
+
+function batteryColor(pct) {
+  if (pct > 60) return '#00ff88';
+  if (pct > 20) return '#ffb800';
+  return '#ff3355';
+}
+
+function statusColor(status) {
+  switch (status) {
+    case 'ACTIVE':      return '#00ff88';
+    case 'RETURNING':   return '#ffb800';
+    case 'LOW_BATTERY': return '#ff3355';
+    case 'OFFLINE':     return '#4a5568';
+    default:            return '#4a5568';
+  }
+}
+
+function threatColor(threat) {
+  switch (threat) {
+    case 'NOMINAL':   return '#00ff88';
+    case 'ELEVATED':  return '#ffb800';
+    case 'CRITICAL':  return '#ff3355';
+    default:          return '#4a5568';
+  }
+}
+
+function countUp(el, target, duration = 600) {
+  const start = parseFloat(el.textContent) || 0;
+  const startTime = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    const val = start + (target - start) * ease;
+    el.textContent = Number.isInteger(target) ? Math.round(val) : val.toFixed(1);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = Number.isInteger(target) ? target : target.toFixed(1);
+  }
+  requestAnimationFrame(step);
+}
+
+function flashElement(el, color = 'rgba(0,212,255,0.2)', duration = 300) {
+  el.style.transition = 'none';
+  el.style.color = color;
+  setTimeout(() => {
+    el.style.transition = 'color 600ms';
+    el.style.color = '';
+  }, duration);
+}
+
+function nowHMS() {
+  return new Date().toISOString().slice(11, 19);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BACKGROUND: GRID CANVAS
+// ═══════════════════════════════════════════════════════════════════════════
+(function initGrid() {
+  const canvas = document.getElementById('bg-grid');
+  const ctx = canvas.getContext('2d');
+  let offset = 0;
+  let lowBatteryPulse = 0;
+  let lastLowBattery = false;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const hasLowBat = [...state.drones.values()].some(d => d.status === 'LOW_BATTERY' || d.status === 'OFFLINE');
+    if (hasLowBat) {
+      lowBatteryPulse = (lowBatteryPulse + 0.02) % (Math.PI * 2);
+      const t = (Math.sin(lowBatteryPulse) + 1) / 2;
+      ctx.strokeStyle = `rgba(255,51,85,${0.04 + t * 0.03})`;
+    } else {
+      ctx.strokeStyle = 'rgba(0,212,255,0.04)';
+    }
+
+    ctx.lineWidth = 0.5;
+    const spacing = 60;
+    offset = (offset + 0.3) % spacing;
+
+    for (let x = -spacing + (offset % spacing); x < W + spacing; x += spacing) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = -spacing + (offset % spacing); y < H + spacing; y += spacing) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BACKGROUND: PARTICLES
+// ═══════════════════════════════════════════════════════════════════════════
+(function initParticles() {
+  const canvas = document.getElementById('bg-particles');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const PARTICLE_COUNT = 200;
+  const particles = [];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.05 + Math.random() * 0.1;
+    particles.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: 0.5 + Math.random() * 1.0,
+      opacity: 0.2 + Math.random() * 0.6,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      cyan: Math.random() < 0.125,
+    });
+  }
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < -2) p.x = W + 2;
+      else if (p.x > W + 2) p.x = -2;
+      if (p.y < -2) p.y = H + 2;
+      else if (p.y > H + 2) p.y = -2;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.cyan
+        ? `rgba(0,212,255,${p.opacity})`
+        : `rgba(255,255,255,${p.opacity})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const hh = now.getUTCHours().toString().padStart(2,'0');
+  const mm = now.getUTCMinutes().toString().padStart(2,'0');
+  const ss = now.getUTCSeconds().toString().padStart(2,'0');
+  document.getElementById('zulu-clock').textContent = `${hh}:${mm}:${ss} Z`;
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('zulu-date').textContent =
+    `${now.getUTCDate().toString().padStart(2,'0')} ${months[now.getUTCMonth()]} ${now.getUTCFullYear()}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  COUNTDOWN & PROGRESS BAR
+// ═══════════════════════════════════════════════════════════════════════════
+let lastFetch = Date.now();
+const FETCH_INTERVAL = 2000;
+
+function updateCountdown() {
+  const elapsed = Date.now() - lastFetch;
+  const remaining = Math.max(0, FETCH_INTERVAL - elapsed);
+  const pct = ((elapsed / FETCH_INTERVAL) * 100).toFixed(1);
+  document.getElementById('sync-countdown').textContent =
+    `NEXT SYNC IN: ${(remaining / 1000).toFixed(1)}s`;
+  document.getElementById('sync-progress').style.width = pct + '%';
+}
+setInterval(updateCountdown, 100);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SESSION INFO
+// ═══════════════════════════════════════════════════════════════════════════
+function updateSessionInfo() {
+  const elapsed = Date.now() - state.sessionStart;
+  document.getElementById('session-info').textContent =
+    `SESSION: ${formatElapsed(elapsed)} | API CALLS: ${state.apiCallCount} | v2.4.1`;
+}
+setInterval(updateSessionInfo, 1000);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GAUGES (SVG arcs)
+// ═══════════════════════════════════════════════════════════════════════════
+const GAUGE_CONFIGS = {
+  battery: { id: 'gauge-battery', color: '#00d4ff', gradId: 'g-bat', label: '%', labelText: 'BATTERY' },
+  signal:  { id: 'gauge-signal',  color: '#00ff88', gradId: 'g-sig', label: '',  labelText: 'SIGNAL'  },
+  uptime:  { id: 'gauge-uptime',  color: '#8b5cf6', gradId: 'g-upt', label: 'm', labelText: 'UPTIME'  },
+};
+
+const R = 32;
+const CIRC = 2 * Math.PI * R;
+const ARC_DEG = 240;
+const ARC_LEN = (ARC_DEG / 360) * CIRC;
+const GAP_LEN = CIRC - ARC_LEN;
+const START_ANGLE = 150; // degrees
+
+function buildGaugeSVG(cfg) {
+  const svg = document.getElementById(cfg.id);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="${cfg.gradId}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${cfg.color}" stop-opacity="1"/>
+        <stop offset="100%" stop-color="${cfg.color}" stop-opacity="0.4"/>
+      </linearGradient>
+      <filter id="glow-${cfg.gradId}">
+        <feGaussianBlur stdDeviation="2" result="blur"/>
+        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+      </filter>
+    </defs>
+    <!-- Outer thin ring -->
+    <circle cx="40" cy="40" r="38" fill="none" stroke="rgba(0,212,255,0.1)" stroke-width="0.5"/>
+    <!-- Track arc -->
+    <circle cx="40" cy="40" r="${R}" fill="none"
+      stroke="rgba(255,255,255,0.06)" stroke-width="6" stroke-linecap="round"
+      stroke-dasharray="${ARC_LEN} ${GAP_LEN}"
+      transform="rotate(${START_ANGLE} 40 40)"/>
+    <!-- Value arc -->
+    <circle cx="40" cy="40" r="${R}" fill="none"
+      stroke="url(#${cfg.gradId})" stroke-width="6" stroke-linecap="round"
+      stroke-dasharray="0 ${CIRC}"
+      transform="rotate(${START_ANGLE} 40 40)"
+      style="transition: stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1); filter: drop-shadow(0 0 6px ${cfg.color})"
+      class="gauge-arc-${cfg.id}"/>
+    <!-- Tick marks at 0,25,50,75,100% positions along the arc -->
+    ${[0,0.25,0.5,0.75,1].map(t => {
+      const angleDeg = START_ANGLE + t * ARC_DEG;
+      const rad = angleDeg * Math.PI / 180;
+      const x1 = 40 + Math.cos(rad) * 36;
+      const y1 = 40 + Math.sin(rad) * 36;
+      const x2 = 40 + Math.cos(rad) * 34.5;
+      const y2 = 40 + Math.sin(rad) * 34.5;
+      return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
+        stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>`;
+    }).join('')}
+    <!-- Center value text -->
+    <text x="40" y="37" text-anchor="middle" dominant-baseline="middle"
+      font-family="'SF Mono','JetBrains Mono',monospace" font-size="18" font-weight="700"
+      fill="${cfg.color}" class="gauge-val-${cfg.id}">0</text>
+    <text x="40" y="50" text-anchor="middle" dominant-baseline="middle"
+      font-family="'SF Mono','JetBrains Mono',monospace" font-size="7"
+      fill="rgba(107,136,153,0.9)" letter-spacing="1">${cfg.labelText}</text>
+  `;
+}
+
+function updateGauge(cfg, value, displayVal, suffix='') {
+  const arcLen = (value / 100) * ARC_LEN;
+  const arcEl = document.querySelector(`.gauge-arc-${cfg.id}`);
+  const valEl = document.querySelector(`.gauge-val-${cfg.id}`);
+  if (arcEl) arcEl.setAttribute('stroke-dasharray', `${arcLen} ${CIRC - arcLen}`);
+  if (valEl) valEl.textContent = (displayVal !== undefined ? displayVal : Math.round(value)) + suffix;
+}
+
+Object.values(GAUGE_CONFIGS).forEach(buildGaugeSVG);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TACTICAL MAP
+// ═══════════════════════════════════════════════════════════════════════════
+const MAP_LAT_MIN = 37.360;
+const MAP_LAT_MAX = 37.440;
+const MAP_LON_MIN = -122.170;
+const MAP_LON_MAX = -122.040;
+const BASE = { lat: 37.4, lon: -122.1 };
+
+let mapCanvas, mapCtx;
+let mapW = 0, mapH = 0;
+let mapLastDraw = 0;
+let baseRingPhase = 0;
+
+function latToY(lat, h) {
+  return h - ((lat - MAP_LAT_MIN) / (MAP_LAT_MAX - MAP_LAT_MIN)) * h;
+}
+function lonToX(lon, w) {
+  return ((lon - MAP_LON_MIN) / (MAP_LON_MAX - MAP_LON_MIN)) * w;
+}
+
+function initMap() {
+  mapCanvas = document.getElementById('map-canvas');
+  mapCtx = mapCanvas.getContext('2d');
+  const rect = mapCanvas.getBoundingClientRect();
+  mapCanvas.width  = rect.width  || mapCanvas.offsetWidth;
+  mapCanvas.height = rect.height || 200;
+  mapW = mapCanvas.width;
+  mapH = mapCanvas.height;
+}
+
+function drawMapFrame(ts) {
+  if (!mapCtx) { requestAnimationFrame(drawMapFrame); return; }
+
+  baseRingPhase = (baseRingPhase + 0.01) % 1;
+
+  const ctx = mapCtx;
+  const W = mapW, H = mapH;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = 'rgba(0,12,28,0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Decorative city blocks
+  ctx.strokeStyle = 'rgba(0,212,255,0.05)';
+  ctx.lineWidth = 1;
+  const blocks = [
+    [0.1,0.2,0.25,0.15],[0.4,0.1,0.3,0.2],[0.65,0.15,0.2,0.25],
+    [0.1,0.5,0.2,0.2],[0.35,0.55,0.15,0.2],[0.6,0.45,0.25,0.15],
+    [0.15,0.75,0.3,0.15],[0.55,0.7,0.2,0.18]
+  ];
+  for (const [x,y,w,h] of blocks) {
+    ctx.strokeRect(x*W, y*H, w*W, h*H);
+  }
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,212,255,0.04)';
+  ctx.lineWidth = 0.5;
+  for (let gx = 0; gx < W; gx += 40) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,H); ctx.stroke(); }
+  for (let gy = 0; gy < H; gy += 40) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke(); }
+
+  // Coord labels at corners
+  ctx.font = '8px "SF Mono", monospace';
+  ctx.fillStyle = 'rgba(58,80,96,0.8)';
+  ctx.textAlign = 'left';  ctx.textBaseline = 'top';    ctx.fillText(`${MAP_LAT_MAX.toFixed(3)}°N`, 4, 2);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';    ctx.fillText(`${MAP_LON_MIN.toFixed(3)}°W`, W-4, 2);
+  ctx.textAlign = 'left';  ctx.textBaseline = 'bottom'; ctx.fillText(`${MAP_LAT_MIN.toFixed(3)}°N`, 4, H-2);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText(`${MAP_LON_MAX.toFixed(3)}°W`, W-4, H-2);
+
+  // Base station
+  const bx = lonToX(BASE.lon, W);
+  const by = latToY(BASE.lat, H);
+
+  // Range rings
+  const ringRadii = [0.12*Math.min(W,H), 0.22*Math.min(W,H), 0.34*Math.min(W,H)];
+  for (let i = 0; i < ringRadii.length; i++) {
+    ctx.beginPath();
+    ctx.arc(bx, by, ringRadii[i], 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(0,212,255,${0.06 - i*0.015})`;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([4,4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Rotating outer ring
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(ts * 0.001 * (Math.PI*2/20));
+  ctx.beginPath();
+  ctx.arc(0, 0, 16, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([4,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Static inner ring
+  ctx.beginPath();
+  ctx.arc(bx, by, 12, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(0,212,255,0.15)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // Crosshair lines
+  ctx.strokeStyle = 'rgba(0,212,255,0.5)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(bx-18,by); ctx.lineTo(bx+18,by); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx,by-18); ctx.lineTo(bx,by+18); ctx.stroke();
+
+  // Tick marks at N/E/S/W on outer ring
+  const tickPos = [[0,-16],[16,0],[0,16],[-16,0]];
+  for (const [tx,ty] of tickPos) {
+    const nx = bx+tx, ny = by+ty;
+    const ang = Math.atan2(ty,tx);
+    ctx.beginPath();
+    ctx.moveTo(nx, ny);
+    ctx.lineTo(nx - Math.cos(ang)*3, ny - Math.sin(ang)*3);
+    ctx.strokeStyle = 'rgba(0,212,255,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Center diamond
+  const gd = ctx.createLinearGradient(bx-4,by-4,bx+4,by+4);
+  gd.addColorStop(0,'#00d4ff'); gd.addColorStop(1,'#0066ff');
+  ctx.save();
+  ctx.translate(bx,by);
+  ctx.rotate(Math.PI/4);
+  ctx.fillStyle = gd;
+  ctx.shadowColor = 'rgba(0,212,255,0.8)';
+  ctx.shadowBlur = 6;
+  ctx.fillRect(-3,-3,6,6);
+  ctx.restore();
+
+  // BASE label
+  ctx.font = '7px "SF Mono", monospace';
+  ctx.fillStyle = 'rgba(0,212,255,0.7)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('BASE', bx, by+20);
+
+  // Drone trails and icons
+  const drones = [...state.drones.values()];
+  for (const drone of drones) {
+    const mp = state.mapPositions.get(drone.id);
+    let rx, ry;
+    if (mp) {
+      const t = Math.min(1, (Date.now() - mp.startTime) / 500);
+      rx = lonToX(lerp(mp.rendered.lon, mp.target.lon, t), W);
+      ry = latToY(lerp(mp.rendered.lat, mp.target.lat, t), H);
+    } else {
+      rx = lonToX(drone.lon, W);
+      ry = latToY(drone.lat, H);
+    }
+
+    const col = statusColor(drone.status);
+
+    // Trail
+    const hist = drone._posHistory || [];
+    if (hist.length > 1) {
+      for (let i = 1; i < hist.length; i++) {
+        const alpha = (i / hist.length) * 0.6;
+        const x0 = lonToX(hist[i-1][1], W), y0 = latToY(hist[i-1][0], H);
+        const x1 = lonToX(hist[i][1], W),   y1 = latToY(hist[i][0], H);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.strokeStyle = col.replace(')', `,${alpha})`).replace('rgb', 'rgba').replace('#', 'rgba(').replace('rgba(00ff88', 'rgba(0,255,136').replace('rgba(ffb800', 'rgba(255,184,0').replace('rgba(ff3355', 'rgba(255,51,85').replace('rgba(4a5568', 'rgba(74,85,104');
+        // simpler approach:
+        ctx.strokeStyle = hexToRGBA(col, alpha);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Pulse ring for ACTIVE / LOW_BATTERY
+    if (drone.status === 'ACTIVE' || drone.status === 'LOW_BATTERY') {
+      const pulseCol = drone.status === 'LOW_BATTERY' ? '#ff3355' : '#00ff88';
+      const pulseDur = drone.status === 'LOW_BATTERY' ? 1000 : 2000;
+      const phase = (Date.now() % pulseDur) / pulseDur;
+      const pr = 6 + phase * 8;
+      const pa = (1 - phase) * 0.4;
+      ctx.beginPath();
+      ctx.arc(rx, ry, pr, 0, Math.PI*2);
+      ctx.strokeStyle = hexToRGBA(pulseCol, pa);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Drone icon (top-down X-frame)
+    drawDroneIcon(ctx, rx, ry, drone.heading, col, drone.status);
+
+    // Label
+    ctx.font = '9px "SF Mono", monospace';
+    ctx.fillStyle = col;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(drone.id, rx + 10, ry - 2);
+  }
+
+  requestAnimationFrame(drawMapFrame);
+}
+
+function hexToRGBA(hex, alpha) {
+  if (hex.startsWith('#')) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return hex;
+}
+
+function drawDroneIcon(ctx, cx, cy, headingDeg, color, status) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate((headingDeg - 90) * Math.PI / 180);
+
+  const bodySize = 3;
+  const armLen = 5;
+  const rotorR = 3;
+
+  // Arms (X pattern)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.8;
+  const arms = [[1,1],[1,-1],[-1,1],[-1,-1]];
+  for (const [dx,dy] of arms) {
+    ctx.beginPath();
+    ctx.moveTo(dx*bodySize*0.7, dy*bodySize*0.7);
+    ctx.lineTo(dx*(bodySize+armLen), dy*(bodySize+armLen));
+    ctx.stroke();
+  }
+
+  // Rotors
+  ctx.globalAlpha = 0.7;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (const [dx,dy] of arms) {
+    ctx.beginPath();
+    ctx.arc(dx*(bodySize+armLen), dy*(bodySize+armLen), rotorR, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  // Body
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 4;
+  ctx.beginPath();
+  ctx.roundRect(-bodySize, -bodySize, bodySize*2, bodySize*2, 1);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Heading notch
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(0, -bodySize);
+  ctx.lineTo(-1.5, -bodySize+2);
+  ctx.lineTo(1.5, -bodySize+2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SVG BUILDERS (inline helpers)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function buildSignalSVG(signal) {
+  const bars = Math.min(4, Math.ceil(signal / 25));
+  const heights = [4, 7, 10, 14];
+  const svgW = 20, svgH = 14;
+  let rects = '';
+  for (let i = 0; i < 4; i++) {
+    const h = heights[i];
+    const x = i * 5;
+    const y = svgH - h;
+    const active = i < bars;
+    if (active) {
+      rects += `<rect x="${x}" y="${y}" width="3" height="${h}" rx="1" fill="url(#sig-grad)" filter="url(#sig-glow)" style="transition:opacity 300ms"/>`;
+    } else {
+      rects += `<rect x="${x}" y="${y}" width="3" height="${h}" rx="1" fill="rgba(255,255,255,0.08)" style="transition:opacity 300ms"/>`;
+    }
+  }
+  return `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="sig-grad" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="rgba(0,212,255,0.6)"/>
+        <stop offset="100%" stop-color="#00d4ff"/>
+      </linearGradient>
+      <filter id="sig-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="0.8" result="blur"/>
+        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+      </filter>
+    </defs>
+    ${rects}
+  </svg>`;
+}
+
+function buildSpeedSVG(speed) {
+  const R_arc = 12;
+  const cx = 16, cy = 16;
+  const totalArcLen = Math.PI * R_arc; // semicircle
+  const valLen = (speed / 80) * totalArcLen;
+  const col = speed > 70 ? 'rgba(255,51,85,0.9)' : speed > 50 ? 'rgba(255,184,0,0.9)' : 'rgba(0,212,255,0.9)';
+
+  // Arc from 180deg to 360deg (bottom semicircle oriented up)
+  return `<svg width="32" height="18" viewBox="0 0 32 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4,16 A${R_arc},${R_arc} 0 0,1 28,16"
+      fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M4,16 A${R_arc},${R_arc} 0 0,1 28,16"
+      fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="${valLen} ${totalArcLen}"
+      style="transition:stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)"/>
+  </svg>`;
+}
+
+function buildCompassSVG(headingDeg, droneId) {
+  const id = `compass-${droneId}`;
+  const innerGroupId = `cg-${droneId}`;
+  return `<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" class="compass-svg" data-drone="${droneId}">
+    <!-- Outer ring -->
+    <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
+    <!-- Major ticks (8 × every 45deg) -->
+    ${[0,45,90,135,180,225,270,315].map(a => {
+      const r = a * Math.PI/180;
+      const x1 = 18 + Math.cos(r-Math.PI/2)*16, y1 = 18 + Math.sin(r-Math.PI/2)*16;
+      const x2 = 18 + Math.cos(r-Math.PI/2)*13, y2 = 18 + Math.sin(r-Math.PI/2)*13;
+      return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
+        stroke="rgba(0,212,255,0.4)" stroke-width="0.8"/>`;
+    }).join('')}
+    <!-- Minor ticks (32 × every 11.25deg, skip majors) -->
+    ${Array.from({length:32},(_,i)=>i*11.25).filter(a=>a%45!==0).map(a => {
+      const r = a * Math.PI/180;
+      const x1 = 18 + Math.cos(r-Math.PI/2)*16, y1 = 18 + Math.sin(r-Math.PI/2)*16;
+      const x2 = 18 + Math.cos(r-Math.PI/2)*14.5, y2 = 18 + Math.sin(r-Math.PI/2)*14.5;
+      return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"
+        stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/>`;
+    }).join('')}
+    <!-- Cardinal labels (counter-rotated) -->
+    <text x="18" y="6.5" text-anchor="middle" dominant-baseline="middle"
+      font-family="'SF Mono',monospace" font-size="5" fill="white">N</text>
+    <text x="29.5" y="19" text-anchor="middle" dominant-baseline="middle"
+      font-family="'SF Mono',monospace" font-size="5" fill="rgba(107,136,153,0.9)">E</text>
+    <text x="18" y="31.5" text-anchor="middle" dominant-baseline="middle"
+      font-family="'SF Mono',monospace" font-size="5" fill="rgba(107,136,153,0.9)">S</text>
+    <text x="6.5" y="19" text-anchor="middle" dominant-baseline="middle"
+      font-family="'SF Mono',monospace" font-size="5" fill="rgba(107,136,153,0.9)">W</text>
+    <!-- Rotating inner group -->
+    <g id="${innerGroupId}" style="transform-origin:18px 18px; transform:rotate(${headingDeg}deg); transition:transform 0.8s cubic-bezier(0.4,0,0.2,1)">
+      <!-- North (cyan) half -->
+      <polygon points="18,8 20,18 18,16 16,18" fill="#00d4ff" filter="drop-shadow(0 0 3px rgba(0,212,255,0.8))"/>
+      <!-- South (dim) half -->
+      <polygon points="18,28 20,18 18,20 16,18" fill="rgba(255,255,255,0.15)"/>
+      <!-- Center dot -->
+      <circle cx="18" cy="18" r="2" fill="white"/>
+    </g>
+  </svg>`;
+}
+
+function buildBatterySVG(pct, color) {
+  const fillW = Math.max(0, Math.min(14, (pct/100)*14));
+  const shimmerAnim = pct < 20 ?
+    `<animate attributeName="x" from="-16" to="16" dur="1.5s" repeatCount="indefinite"/>` : '';
+  const pulseAnim = pct < 10 ?
+    `style="animation:blink 0.5s step-end infinite"` : '';
+  return `<svg width="20" height="10" viewBox="0 0 20 10" xmlns="http://www.w3.org/2000/svg" ${pulseAnim}>
+    <rect x="0" y="1" width="16" height="8" rx="2" fill="none" stroke="${color}" stroke-width="1.5"/>
+    <rect x="16" y="3" width="2" height="4" rx="0.5" fill="${color}" opacity="0.5"/>
+    <rect x="1.5" y="2.5" width="${fillW}" height="5" rx="1" fill="${color}">
+      ${shimmerAnim}
+    </rect>
+  </svg>`;
+}
+
+function buildThreatBadge(threat) {
+  const icons = {
+    NOMINAL: `<svg width="8" height="8" viewBox="0 0 8 8"><polyline points="1,4 3,6 7,2" stroke="#00ff88" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    ELEVATED: `<svg width="8" height="8" viewBox="0 0 8 8"><line x1="4" y1="7" x2="4" y2="2" stroke="#ffb800" stroke-width="1.5" stroke-linecap="round"/><polyline points="1.5,4.5 4,2 6.5,4.5" stroke="#ffb800" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    CRITICAL: `<svg width="8" height="10" viewBox="0 0 8 10"><polyline points="5,1 3,6 5,6 3,9" stroke="#ff3355" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    UNKNOWN:  `<svg width="8" height="8" viewBox="0 0 8 8"><path d="M3,3 Q3,1 4,1.5 Q5,2 5,3 Q5,4 4,4.5" stroke="#6b7280" stroke-width="1.2" fill="none" stroke-linecap="round"/><rect x="3.5" y="6" width="1" height="1" fill="#6b7280"/></svg>`,
+  };
+  const icon = icons[threat] || icons.UNKNOWN;
+  return `<span class="threat-badge ${threat}">${icon} ${threat}</span>`;
+}
+
+function buildStatusDot(status) {
+  const col = statusColor(status);
+  return `<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="8" r="3" fill="${col}"/>
+    <circle cx="8" cy="8" r="3" stroke="${col}" fill="none" class="pulse-ring"/>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UPDATE: HEADER
+// ═══════════════════════════════════════════════════════════════════════════
+function updateHeader(summary) {
+  if (!summary) return;
+  const drones = [...state.drones.values()];
+  const gpsLock = drones.filter(d => d.signal_strength > 30).length;
+  document.getElementById('gps-pill').lastChild.textContent = ` GPS LOCK: ${gpsLock}/5`;
+
+  const threat = summary.fleet_threat_level;
+  const tpill = document.getElementById('threat-pill');
+  const ttext = document.getElementById('threat-pill-text');
+  const tdot  = document.getElementById('threat-dot');
+  const tring = document.getElementById('threat-ring');
+  ttext.textContent = `THREAT: ${threat}`;
+  tpill.className = 'status-pill ' + (threat==='NOMINAL' ? 'green' : threat==='ELEVATED' ? 'amber' : 'red');
+  const tc = threatColor(threat);
+  tdot.setAttribute('fill', tc);
+  tring.setAttribute('stroke', tc);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UPDATE: LEFT SIDEBAR
+// ═══════════════════════════════════════════════════════════════════════════
+function updateSidebar(drones, summary) {
+  if (summary) {
+    countUp(document.getElementById('sb-total'), summary.total);
+    countUp(document.getElementById('sb-active'), summary.active);
+    countUp(document.getElementById('sb-returning'), summary.returning);
+    countUp(document.getElementById('sb-low'), summary.low_battery);
+    countUp(document.getElementById('sb-offline'), summary.offline);
+    const batEl = document.getElementById('sb-avg-bat');
+    batEl.textContent = summary.avg_battery.toFixed(1) + '%';
+    document.getElementById('sb-avg-bat-bar').style.width = summary.avg_battery + '%';
+  }
+
+  const container = document.getElementById('drone-cards');
+  for (const drone of drones) {
+    let card = document.getElementById(`card-${drone.id}`);
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'drone-card';
+      card.id = `card-${drone.id}`;
+      card.addEventListener('click', () => selectDrone(drone.id));
+      container.appendChild(card);
+    }
+
+    const batPct = drone.battery;
+    const batCol = batteryColor(batPct);
+    const statusCol = statusColor(drone.status);
+
+    card.className = 'drone-card' +
+      (drone.status === 'LOW_BATTERY' ? ' low-battery' : '') +
+      (state.selectedDroneId === drone.id ? ' selected' : '');
+    card.style.borderLeft = `3px solid ${statusCol}`;
+
+    const fillClass = batPct > 60 ? 'high' : batPct > 20 ? 'medium' : 'low';
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-drone-id">${drone.id}</span>
+        <span class="card-status-badge" style="background:${statusCol}22;border:1px solid ${statusCol}55;color:${statusCol}">${drone.status.replace('_',' ')}</span>
+        <span class="card-threat" style="color:${threatColor(drone.threat_level)}">${drone.threat_level}</span>
+      </div>
+      <div class="card-battery-bar">
+        <div class="card-battery-fill ${fillClass}" style="width:${batPct}%;background:${batCol}"></div>
+      </div>
+      <div class="card-metrics">
+        <div class="card-metric">
+          <span class="card-metric-label">Battery</span>
+          <span class="card-metric-value" style="color:${batCol}">${batPct.toFixed(1)}%</span>
+        </div>
+        <div class="card-metric">
+          <span class="card-metric-label">Signal</span>
+          <span class="card-metric-value">${drone.signal_strength.toFixed(0)}</span>
+        </div>
+        <div class="card-metric">
+          <span class="card-metric-label">Alt</span>
+          <span class="card-metric-value">${drone.altitude.toFixed(0)}m</span>
+        </div>
+        <div class="card-metric">
+          <span class="card-metric-label">Speed</span>
+          <span class="card-metric-value">${drone.speed.toFixed(1)} km/h</span>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function selectDrone(droneId) {
+  state.selectedDroneId = state.selectedDroneId === droneId ? null : droneId;
+  // Highlight row
+  document.querySelectorAll('#drone-table-body tr').forEach(row => {
+    const id = row.dataset.droneId;
+    if (id === state.selectedDroneId) row.classList.add('selected');
+    else row.classList.remove('selected');
+  });
+  // Highlight card
+  document.querySelectorAll('.drone-card').forEach(card => {
+    card.classList.toggle('selected', card.id === `card-${state.selectedDroneId}`);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UPDATE: MISSION LOG
+// ═══════════════════════════════════════════════════════════════════════════
+function updateMissionLog(drones) {
+  for (const drone of drones) {
+    const prev = state.previousStatuses.get(drone.id);
+    if (prev !== undefined && prev !== drone.status) {
+      const entry = {
+        timestamp: nowHMS(),
+        droneId: drone.id,
+        event: `${drone.id} → ${drone.status}`,
+      };
+      state.missionLog.push(entry);
+      if (state.missionLog.length > 50) state.missionLog.shift();
+      renderMissionLog();
+    }
+    state.previousStatuses.set(drone.id, drone.status);
+  }
+}
+
+function renderMissionLog() {
+  const list = document.getElementById('mission-log-list');
+  const entries = state.missionLog.slice(-12);
+  list.innerHTML = '';
+  entries.forEach((e, i) => {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.style.animationDelay = `${i * 20}ms`;
+    div.innerHTML = `
+      <span class="log-time">${e.timestamp}</span>
+      <span class="log-id">${e.droneId}</span>
+      <span class="log-event">${e.event.split(' → ')[1] || e.event}</span>
+    `;
+    list.appendChild(div);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UPDATE: MAIN TABLE
+// ═══════════════════════════════════════════════════════════════════════════
+const THREAT_ORDER = { CRITICAL: 0, ELEVATED: 1, NOMINAL: 2, UNKNOWN: 3 };
+const STATUS_ORDER = { LOW_BATTERY: 0, RETURNING: 1, ACTIVE: 2, OFFLINE: 3 };
+
+function updateTable(drones) {
+  const sorted = [...drones].sort((a, b) => {
+    const ta = THREAT_ORDER[a.threat_level] ?? 9;
+    const tb = THREAT_ORDER[b.threat_level] ?? 9;
+    if (ta !== tb) return ta - tb;
+    return (STATUS_ORDER[a.status]??9) - (STATUS_ORDER[b.status]??9);
+  });
+
+  const tbody = document.getElementById('drone-table-body');
+
+  // Build a map of existing rows
+  const existingRows = {};
+  tbody.querySelectorAll('tr').forEach(r => { existingRows[r.dataset.droneId] = r; });
+
+  sorted.forEach((drone, idx) => {
+    let row = existingRows[drone.id];
+    const isNew = !row;
+
+    if (isNew) {
+      row = document.createElement('tr');
+      row.dataset.droneId = drone.id;
+      row.addEventListener('click', () => selectDrone(drone.id));
+      setTimeout(() => { row.style.opacity = '1'; }, idx * 50);
+      row.style.opacity = '0';
+      row.style.transition = 'opacity 300ms';
+    }
+
+    // Status flash on change
+    const prev = state.previousStatuses.get(drone.id);
+    if (prev && prev !== drone.status && !isNew) {
+      row.classList.remove('row-flash');
+      void row.offsetWidth;
+      row.classList.add('row-flash');
+    }
+
+    // Row class
+    row.className = '';
+    if (drone.status === 'LOW_BATTERY') row.classList.add('status-low-battery');
+    if (drone.status === 'OFFLINE')     row.classList.add('status-offline');
+    if (state.selectedDroneId === drone.id) row.classList.add('selected');
+
+    const batPct = drone.battery;
+    const batCol = batteryColor(batPct);
+    const batClass = batPct > 60 ? 'high' : batPct > 20 ? 'medium' : 'low';
+
+    // Coord flash
+    const prevCoords = state.previousCoords.get(drone.id);
+    let latFlash = '', lonFlash = '';
+    if (prevCoords) {
+      if (Math.abs(prevCoords.lat - drone.lat) > 0.001) latFlash = ' flash';
+      if (Math.abs(prevCoords.lon - drone.lon) > 0.001) lonFlash = ' flash';
+    }
+    state.previousCoords.set(drone.id, { lat: drone.lat, lon: drone.lon });
+
+    row.innerHTML = `
+      <td>
+        <div class="unit-cell">
+          <div class="unit-top">
+            ${buildStatusDot(drone.status)}
+            <span class="unit-id">${drone.id}</span>
+          </div>
+          <span class="mission-badge">${drone.mission}</span>
+        </div>
+      </td>
+      <td><span class="status-badge ${drone.status}">${drone.status.replace('_',' ')}</span></td>
+      <td>
+        <div class="battery-cell">
+          <span class="battery-pct" style="color:${batCol}">${batPct.toFixed(1)}%</span>
+          <div class="battery-track">
+            <div class="battery-fill ${batClass}" style="width:${batPct}%"></div>
+          </div>
+        </div>
+      </td>
+      <td>${buildSignalSVG(drone.signal_strength)}</td>
+      <td>
+        <div class="alt-cell">
+          <span class="alt-number">${drone.altitude.toFixed(0)}</span>
+          <span class="alt-unit">M</span>
+          <div class="alt-bar-wrap">
+            <div class="alt-bar-fill" style="height:${(drone.altitude/250*100).toFixed(1)}%"></div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-start">
+          <span style="font-size:14px;color:var(--text1)">${drone.speed.toFixed(1)}<span style="font-size:9px;color:var(--text3)"> KM/H</span></span>
+          ${buildSpeedSVG(drone.speed)}
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span style="font-size:11px;color:var(--text1)">${drone.heading.toFixed(0)}°</span>
+          ${buildCompassSVG(drone.heading, drone.id)}
+        </div>
+      </td>
+      <td>
+        <div class="coords-cell">
+          <span class="coord-line${latFlash}">${drone.lat.toFixed(5)}</span>
+          <span class="coord-line${lonFlash}">${drone.lon.toFixed(5)}</span>
+        </div>
+      </td>
+      <td><span class="flight-time">${formatTime(drone.flight_time_seconds)}</span></td>
+      <td>${buildThreatBadge(drone.threat_level)}</td>
+    `;
+
+    if (isNew) {
+      tbody.appendChild(row);
+      setTimeout(() => { row.style.opacity = '1'; }, idx * 50 + 10);
+    }
+
+    // Clear coord flash after animation
+    if (latFlash || lonFlash) {
+      setTimeout(() => {
+        row.querySelectorAll('.coord-line.flash').forEach(el => el.classList.remove('flash'));
+      }, 400);
+    }
+  });
+
+  // Re-order rows in DOM to match sorted order
+  sorted.forEach(drone => {
+    const row = tbody.querySelector(`tr[data-drone-id="${drone.id}"]`);
+    if (row) tbody.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UPDATE: ALERT BANNER
+// ═══════════════════════════════════════════════════════════════════════════
+function updateAlertBanner(drones) {
+  const critical = drones.filter(d => d.status === 'LOW_BATTERY' || d.status === 'OFFLINE');
+  const banner = document.getElementById('alert-banner');
+  if (critical.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('alert-text').textContent =
+      `ALERT: ${critical.length} UNIT(S) REQUIRE IMMEDIATE ACTION`;
+    document.getElementById('alert-ids').innerHTML =
+      critical.map(d => `<span class="alert-id-pill">${d.id}</span>`).join('');
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UPDATE: RIGHT SIDEBAR
+// ═══════════════════════════════════════════════════════════════════════════
+function updateRightSidebar(drones, summary) {
+  if (!summary) return;
+
+  // Gauges
+  updateGauge(GAUGE_CONFIGS.battery, summary.avg_battery, summary.avg_battery.toFixed(1), '%');
+  const avgSig = drones.length
+    ? drones.reduce((s,d) => s + d.signal_strength, 0) / drones.length : 0;
+  updateGauge(GAUGE_CONFIGS.signal, avgSig, avgSig.toFixed(0));
+  const uptimeMin = Math.floor((Date.now() - state.sessionStart) / 60000);
+  const uptimePct = Math.min(100, (uptimeMin / 60) * 100);
+  updateGauge(GAUGE_CONFIGS.uptime, uptimePct, uptimeMin + 'm');
+
+  // Threat matrix
+  const tbody = document.getElementById('threat-tbody');
+  tbody.innerHTML = drones.map(d => `
+    <tr style="border-left:3px solid ${threatColor(d.threat_level)}">
+      <td class="threat-drone-id">${d.id}</td>
+      <td>${buildThreatBadge(d.threat_level)}</td>
+    </tr>
+  `).join('');
+
+  const ft = document.getElementById('fleet-threat-display');
+  ft.textContent = summary.fleet_threat_level;
+  ft.style.color = threatColor(summary.fleet_threat_level);
+
+  // Network status
+  const latency = 12 + Math.floor(Math.random() * 16);
+  document.getElementById('net-api-calls').textContent = state.apiCallCount;
+  document.getElementById('net-latency').textContent = `${latency}ms`;
+  document.getElementById('net-data-rate').textContent = `${(2.1 + Math.random()*0.8).toFixed(1)} KB/s`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SYSTEM TELEMETRY FEED
+// ═══════════════════════════════════════════════════════════════════════════
+const TELEM_MAX = 60;
+let telemLines = [];
+
+function addTelemetryLine() {
+  const drones = [...state.drones.values()];
+  if (drones.length === 0) return;
+
+  const hms = nowHMS();
+  const messages = [
+    () => ({ text: `FLEET PING: ${drones.filter(d=>d.status!=='OFFLINE').length}/5 UNITS RESPONDING`, cls: 'telem-normal' }),
+    () => {
+      const summary = state.summary;
+      const avg = summary ? summary.avg_battery.toFixed(1) : '–';
+      return { text: `AVG BATTERY: ${avg}% | TICK DELTA: -0.1%`, cls: 'telem-normal' };
+    },
+    () => {
+      const d = drones[Math.floor(Math.random() * drones.length)];
+      return { text: `UNIT ${d.id}: ALT=${d.altitude.toFixed(0)}m SPD=${d.speed.toFixed(0)}km/h`, cls: 'telem-normal' };
+    },
+    () => ({ text: `GPS LOCK CONFIRMED: ${drones.filter(d=>d.signal_strength>30).length} SATELLITES`, cls: 'telem-ok' }),
+    () => {
+      const crit = drones.find(d => d.status === 'LOW_BATTERY' || d.status === 'OFFLINE');
+      if (crit) return { text: `WARNING: ${crit.id} BATTERY CRITICAL`, cls: 'telem-warning' };
+      return { text: `ALL UNITS NOMINAL — NO ALERTS`, cls: 'telem-ok' };
+    },
+    () => ({ text: `TELEMETRY SYNC: OK [${12 + Math.floor(Math.random()*16)}ms]`, cls: 'telem-normal' }),
+    () => ({ text: `HEADING DATA: ${drones.map(d=>d.id.slice(-3)+':'+d.heading.toFixed(0)+'°').join(' ')}`, cls: 'telem-normal' }),
+  ];
+
+  const gen = messages[Math.floor(Math.random() * messages.length)]();
+  telemLines.push(`[${hms}] > ${gen.text}|||${gen.cls}`);
+  if (telemLines.length > TELEM_MAX) telemLines.shift();
+
+  const feed = document.getElementById('telemetry-feed');
+  feed.innerHTML = telemLines.map(l => {
+    const [text, cls] = l.split('|||');
+    return `<div class="telem-line ${cls}">${text}</div>`;
+  }).join('');
+  feed.scrollTop = feed.scrollHeight;
+}
+
+setInterval(addTelemetryLine, 2000);
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MAP POSITION INTERPOLATION
+// ═══════════════════════════════════════════════════════════════════════════
+function updateMapPositions(drones) {
+  for (const drone of drones) {
+    const existing = state.mapPositions.get(drone.id);
+    if (!existing) {
+      state.mapPositions.set(drone.id, {
+        rendered: { lat: drone.lat, lon: drone.lon },
+        target:   { lat: drone.lat, lon: drone.lon },
+        startTime: Date.now(),
+      });
+    } else {
+      state.mapPositions.set(drone.id, {
+        rendered: {
+          lat: lerp(existing.rendered.lat, existing.target.lat, Math.min(1,(Date.now()-existing.startTime)/500)),
+          lon: lerp(existing.rendered.lon, existing.target.lon, Math.min(1,(Date.now()-existing.startTime)/500)),
+        },
+        target:   { lat: drone.lat, lon: drone.lon },
+        startTime: Date.now(),
+      });
+    }
+    // Attach history for trail rendering
+    drone._posHistory = drone._posHistory || [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FETCH
+// ═══════════════════════════════════════════════════════════════════════════
+async function fetchAll() {
+  const t0 = Date.now();
+  try {
+    const [dronesResp, summaryResp] = await Promise.all([
+      fetch('/drones'),
+      fetch('/fleet/summary'),
+    ]);
+
+    if (!dronesResp.ok || !summaryResp.ok) throw new Error('HTTP error');
+
+    const [dronesData, summaryData] = await Promise.all([
+      dronesResp.json(),
+      summaryResp.json(),
+    ]);
+
+    state.apiCallCount += 2;
+    state.fetchError = false;
+    lastFetch = Date.now();
+
+    // Update drones map, attach history
+    for (const drone of dronesData) {
+      const prev = state.drones.get(drone.id);
+      drone._posHistory = prev ? prev._posHistory || [] : [];
+      state.drones.set(drone.id, drone);
+    }
+    state.summary = summaryData;
+
+    // Fetch histories for trail
+    dronesData.forEach(drone => {
+      fetch(`/drones/${drone.id}/history`).then(r => r.json()).then(hist => {
+        const d = state.drones.get(drone.id);
+        if (d) d._posHistory = hist.map(p => [p[0], p[1]]);
+      }).catch(() => {});
+    });
+
+    updateHeader(summaryData);
+    updateMissionLog(dronesData);
+    updateSidebar(dronesData, summaryData);
+    updateAlertBanner(dronesData);
+    updateTable(dronesData);
+    updateRightSidebar(dronesData, summaryData);
+    updateMapPositions(dronesData);
+
+    document.getElementById('feed-status-text').className = 'feed-active';
+    document.getElementById('feed-status-text').textContent = '● TELEMETRY FEED ACTIVE';
+    document.getElementById('net-feed-status').className = 'net-value feed-active';
+    document.getElementById('net-feed-status').textContent = '● NOMINAL';
+
+    if (state.firstLoad) {
+      state.firstLoad = false;
+    }
+
+  } catch (e) {
+    state.fetchError = true;
+    document.getElementById('feed-status-text').className = 'feed-error';
+    document.getElementById('feed-status-text').textContent = '● FEED INTERRUPTED';
+    document.getElementById('net-feed-status').className = 'net-value feed-error';
+    document.getElementById('net-feed-status').textContent = '● DEGRADED';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOAD SEQUENCE & INIT
+// ═══════════════════════════════════════════════════════════════════════════
+function runLoadSequence() {
+  setTimeout(() => {
+    document.getElementById('header').style.opacity = '1';
+    document.getElementById('header').style.transform = 'translateY(0)';
+  }, 100);
+
+  setTimeout(() => {
+    document.getElementById('left-sidebar').style.opacity = '1';
+    document.getElementById('left-sidebar').style.transform = 'translateX(0)';
+  }, 300);
+
+  setTimeout(() => {
+    document.getElementById('center-panel').style.opacity = '1';
+  }, 400);
+
+  setTimeout(() => {
+    document.getElementById('right-sidebar').style.opacity = '1';
+    document.getElementById('right-sidebar').style.transform = 'translateX(0)';
+  }, 500);
+
+  setTimeout(() => {
+    document.getElementById('status-bar').style.opacity = '1';
+  }, 600);
+
+  setTimeout(() => {
+    fetchAll();
+  }, 800);
+}
+
+function init() {
+  initMap();
+  requestAnimationFrame(drawMapFrame);
+  runLoadSequence();
+  setInterval(fetchAll, FETCH_INTERVAL);
+  updateSessionInfo();
+  updateCountdown();
+  // Seed mission log with initial entry
+  setTimeout(() => {
+    state.missionLog.push({ timestamp: nowHMS(), droneId: 'SYSTEM', event: 'FLEET INITIALIZED' });
+    renderMissionLog();
+  }, 900);
+}
+
+window.addEventListener('load', () => {
+  // Handle canvas resize
+  const obs = new ResizeObserver(() => {
+    const rect = document.getElementById('map-canvas').getBoundingClientRect();
+    if (mapCanvas) {
+      mapCanvas.width  = rect.width;
+      mapCanvas.height = rect.height || 200;
+      mapW = mapCanvas.width;
+      mapH = mapCanvas.height;
+    }
+  });
+  obs.observe(document.getElementById('map-canvas'));
+  init();
+});
+</script>
+</body>
+</html>
